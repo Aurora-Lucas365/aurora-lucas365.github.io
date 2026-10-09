@@ -1,0 +1,40 @@
+# 自动构建并发布网站
+# 每次有新的提交推送到 main 分支，GitHub 就会按这个文件：
+# 1. 下载仓库代码  2. 安装依赖并用 Astro 生成网页  3. 发布到 GitHub Pages
+# 写法参照 Astro 官方文档：https://docs.astro.build/en/guides/deploy/github/
+
+name: 发布网站
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允许在 GitHub 网页上手动点按钮重新发布
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # 本地装依赖用的是国内镜像；GitHub 的服务器在国外，改回官方源下载更快
+      NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+      NPM_CONFIG_REPLACE_REGISTRY_HOST: always
+    steps:
+      - name: 下载仓库代码
+        uses: actions/checkout@v7
+      - name: 安装依赖、生成网页并打包
+        uses: withastro/action@v6
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

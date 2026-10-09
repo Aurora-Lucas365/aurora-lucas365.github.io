@@ -1,0 +1,29 @@
+{
+  "name": "aurora-lucas365.github.io",
+  "version": "1.0.0",
+  "description": "Personal website of Lucas Taylor: projects and learning log",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "sync": "node scripts/sync-notes.mjs",
+    "drafts": "node scripts/sync-notes.mjs --drafts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aurora-Lucas365/aurora-lucas365.github.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Aurora-Lucas365/aurora-lucas365.github.io/issues"
+  },
+  "homepage": "https://github.com/Aurora-Lucas365/aurora-lucas365.github.io#readme",
+  "dependencies": {
+    "astro": "^7.3.8"
+  }
+}

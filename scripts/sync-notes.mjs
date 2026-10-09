@@ -5,6 +5,9 @@
  * 用法（在网站仓库根目录运行）：
  *   node scripts/sync-notes.mjs          正式同步
  *   node scripts/sync-notes.mjs --dry    只预览，不写文件
+ *   node scripts/sync-notes.mjs --drafts 连草稿（publish 没勾）也同步，只用于本地预览：
+ *                                        草稿写成 *.draft.md、图片放 public/notes/_drafts/，
+ *                                        这两类文件被 .gitignore 排除，永远不会上传
  *
  * 配置：网站仓库根目录下的 sync.config.json
  *   { "vault": "E:/math model repository/数模" }
@@ -23,6 +26,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DRY = process.argv.includes("--dry");
+const DRAFTS = process.argv.includes("--drafts");
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONFIG_FILE = path.join(SITE, "sync.config.json");
 
@@ -119,7 +123,8 @@ function main() {
   for (const file of mdFiles) {
     const rel = path.relative(vault, file).split(path.sep).join("/");
     const { data, body } = splitFrontmatter(fs.readFileSync(file, "utf8"));
-    if (data.publish !== true) continue;
+    const isDraft = data.publish !== true;
+    if (isDraft && !(DRAFTS && SECTIONS[data.section])) continue; // 草稿只在 --drafts 时带上
     const sec = SECTIONS[data.section];
     const problems = [];
     if (!sec) problems.push(`section 必须是 项目 / 历程 / 关于，现在是「${data.section ?? "空"}」`);
@@ -134,9 +139,14 @@ function main() {
     }
     let slug = data.slug ? asciiSlug(String(data.slug)) : asciiSlug(baseName(file));
     if (!slug) problems.push("缺少 slug（文件名是中文时必须手动填，例如 desk-pet）");
-    if (problems.length) { errors.push(`${rel}\n    - ${problems.join("\n    - ")}`); continue; }
-    if (/待补充/.test(body)) warnings.push(`${rel}：正文里还有「待补充」`);
-    notes.push({ file, rel, data, body, sec, slug, name: baseName(file) });
+    if (problems.length) {
+      const msg = `${rel}\n    - ${problems.join("\n    - ")}`;
+      if (isDraft) warnings.push(`草稿属性不完整，已跳过：${msg}`); else errors.push(msg);
+      continue;
+    }
+    if (/（待补充/.test(body)) warnings.push(`${rel}：正文里还有「（待补充…）」占位`);
+    const assetDir = isDraft ? `${ASSET_DIR}/_drafts/${slug}` : `${ASSET_DIR}/${slug}`;
+    notes.push({ file, rel, data, body, sec, slug, isDraft, assetDir, name: baseName(file) });
   }
 
   // slug 不能重复
@@ -171,10 +181,10 @@ function main() {
     const candidates = [path.resolve(path.dirname(n.file), ref), path.join(path.dirname(n.file), "附件", fileName)];
     const src = candidates.find(isFile) || attachments.get(fileName);
     if (!src) { warnings.push(`${n.rel}：找不到图片「${fileName}」`); return null; }
-    const out = `${ASSET_DIR}/${n.slug}/${fileName}`;
+    const out = `${n.assetDir}/${fileName}`;
     if (!copied.has(out)) {
       if (!DRY) {
-        fs.mkdirSync(path.join(SITE, ASSET_DIR, n.slug), { recursive: true });
+        fs.mkdirSync(path.join(SITE, n.assetDir), { recursive: true });
         fs.copyFileSync(src, path.join(SITE, out));
       }
       copied.add(out);
@@ -216,7 +226,7 @@ function main() {
     });
 
     // 提示框：> [!note] 标题 → > **标题**
-    body = body.replace(/^>\s*\[!([a-zA-Z-]+)\][+-]?\s*(.*)$/gm, (_, type, title) => `> **${title || type}**`);
+    body = body.replace(/^>\s*\[!([a-zA-Z-]+)\][+-]?\s*(.*)$/gm, (_, type, title) => `> **${title || type}**\n>`);
     // 高亮：==文字== → <mark>
     body = body.replace(/==([^=\n]+)==/g, "<mark>$1</mark>");
 
@@ -228,17 +238,18 @@ function main() {
     const tags = Array.isArray(n.data.tags) ? n.data.tags : n.data.tags ? [n.data.tags] : [];
     fm.push(`tags: [${tags.map(yamlStr).join(", ")}]`);
     if (n.data.cover) { const url = copyImage(n, String(n.data.cover)); if (url) fm.push(`cover: ${yamlStr(url)}`); }
+    if (n.isDraft) fm.push("draft: true");
     fm.push("---", "", "");
 
-    const out = path.join(SITE, n.sec.dir, `${n.slug}.md`);
+    const out = path.join(SITE, n.sec.dir, `${n.slug}${n.isDraft ? ".draft" : ""}.md`);
     if (!DRY) fs.writeFileSync(out, fm.join("\n") + body.replace(/^\s+/, "").replace(/\n{3,}/g, "\n\n"), "utf8");
   }
 
   // 汇报
   const count = (s) => notes.filter((n) => n.data.section === s).length;
-  console.log(`\n${DRY ? "【预览，没有写入文件】" : "✓ 同步完成"}`);
+  console.log(`\n${DRY ? "【预览，没有写入文件】" : "✓ 同步完成"}${DRAFTS ? "（含草稿，仅本地预览）" : ""}`);
   console.log(`  项目 ${count("项目")} 篇 · 历程 ${count("历程")} 篇 · 关于 ${count("关于")} 篇 · 图片 ${copied.size} 张`);
-  for (const n of notes) console.log(`  ${n.data.section}  ${n.rel}  →  ${urlOf(n)}`);
+  for (const n of notes) console.log(`  ${n.isDraft ? "草稿" : "公开"} · ${n.data.section}  ${n.rel}  →  ${urlOf(n)}`);
   if (warnings.length) { console.log("\n⚠ 提醒："); warnings.forEach((w) => console.log("  · " + w)); }
   if (!notes.length) console.log("\n  没有找到 publish: true 的笔记。在笔记属性里把 publish 打勾后再运行。");
   console.log("");

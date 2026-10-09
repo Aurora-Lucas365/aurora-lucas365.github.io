@@ -1,7 +1,11 @@
 # 只在本机用的配置（里面有库在电脑上的路径）
 sync.config.json
 
-# 之后搭网站时会产生的文件
+# 本地草稿预览（npm run sync:drafts 生成），永远不上传
+src/content/**/*.draft.md
+public/notes/_drafts/
+
+# 搭网站时自动产生的文件
 node_modules/
 dist/
 .astro/

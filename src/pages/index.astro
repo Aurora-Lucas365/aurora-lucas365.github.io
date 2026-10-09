@@ -1,0 +1,38 @@
+---
+// 首页：一句话介绍 + 最近的项目 + 最近的历程
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import { formatDate, byDateDesc } from "../utils";
+
+const projects = (await getCollection("projects")).sort(byDateDesc);
+const journal = (await getCollection("journal")).sort(byDateDesc).slice(0, 5);
+---
+<Base>
+  <h1>你好，我是 Lucas Taylor</h1>
+  <p class="muted">电气工程及其自动化专业本科生，方向是电气工程 + 嵌入式 + AI。这里记录我做项目和学习的过程。</p>
+
+  <h2>项目</h2>
+  {projects.length === 0 && <p class="muted">还没有公开的项目。</p>}
+  <ul class="list">
+    {projects.map((p) => (
+      <li>
+        <a href={`/projects/${p.id}/`}>{p.data.title}</a>
+        {p.data.draft && <span class="tag draft">草稿</span>}
+        <div class="meta">{p.data.category} · {p.data.status} · {formatDate(p.data.date)}</div>
+        {p.data.summary && <div>{p.data.summary}</div>}
+      </li>
+    ))}
+  </ul>
+
+  <h2>最近的历程</h2>
+  {journal.length === 0 && <p class="muted">还没有公开的历程。</p>}
+  <ul class="list">
+    {journal.map((j) => (
+      <li>
+        <a href={`/journal/${j.id}/`}>{j.data.title}</a>
+        {j.data.draft && <span class="tag draft">草稿</span>}
+        <div class="meta">{formatDate(j.data.date)}</div>
+      </li>
+    ))}
+  </ul>
+</Base>

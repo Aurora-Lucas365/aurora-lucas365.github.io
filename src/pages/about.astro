@@ -1,0 +1,22 @@
+---
+// 关于页：内容来自 Obsidian 里的「关于.md」
+import { getEntry, render } from "astro:content";
+import Base from "../layouts/Base.astro";
+
+const entry = await getEntry("pages", "about");
+const Content = entry ? (await render(entry)).Content : null;
+---
+<Base title="关于">
+  {Content ? (
+    <>
+      <h1>{entry!.data.title}</h1>
+      {entry!.data.draft && <p><span class="tag draft">草稿</span></p>}
+      <article><Content /></article>
+    </>
+  ) : (
+    <>
+      <h1>关于我</h1>
+      <p class="muted">这一页还在写。</p>
+    </>
+  )}
+</Base>

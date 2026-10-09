@@ -1,0 +1,23 @@
+---
+// 历程列表：按日期从新到旧
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { formatDate, byDateDesc } from "../../utils";
+
+const journal = (await getCollection("journal")).sort(byDateDesc);
+---
+<Base title="历程">
+  <h1>历程</h1>
+  <p class="muted">学习和做项目的过程记录。</p>
+  {journal.length === 0 && <p class="muted">还没有公开的历程。</p>}
+  <ul class="list">
+    {journal.map((j) => (
+      <li>
+        <a href={`/journal/${j.id}/`}>{j.data.title}</a>
+        {j.data.draft && <span class="tag draft">草稿</span>}
+        <div class="meta">{formatDate(j.data.date)}</div>
+        {j.data.summary && <div>{j.data.summary}</div>}
+      </li>
+    ))}
+  </ul>
+</Base>

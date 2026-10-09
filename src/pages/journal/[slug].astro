@@ -1,0 +1,26 @@
+---
+// 单篇历程的页面
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { formatDate } from "../../utils";
+
+export async function getStaticPaths() {
+  const journal = await getCollection("journal");
+  return journal.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+---
+<Base title={d.title} description={d.summary}>
+  <p class="meta"><a href="/journal/">← 全部历程</a></p>
+  <h1>{d.title}</h1>
+  <p class="meta">
+    {formatDate(d.date)}
+    {d.draft && <span class="tag draft">草稿</span>}
+  </p>
+  <article>
+    <Content />
+  </article>
+</Base>
