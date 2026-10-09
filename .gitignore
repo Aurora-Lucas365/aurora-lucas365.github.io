@@ -1,0 +1,7 @@
+# 只在本机用的配置（里面有库在电脑上的路径）
+sync.config.json
+
+# 之后搭网站时会产生的文件
+node_modules/
+dist/
+.astro/
