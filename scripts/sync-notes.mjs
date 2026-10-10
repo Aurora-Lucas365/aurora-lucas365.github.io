@@ -15,7 +15,8 @@
  * 规则（和库里的「发布规则」一致）：
  *   - 只同步属性 publish 为 true 的笔记；其他一律跳过。
  *   - section 决定栏目：项目 → src/content/projects，历程 → src/content/journal，关于 → src/content/pages
- *   - 图片复制到 public/notes/<slug>/，正文里的链接自动改写。
+ *   - 图片复制到 public/notes/<slug>/，正文里的链接自动改写；封面图如果也出现在正文里，正文那张会去掉，避免重复。
+ *   - stats / specs / highlights 三个列表属性原样带过去，每一项写成「左边 | 右边」。
  *   - 指向未公开笔记的 [[双链]] 变成普通文字；%% 注释 %% 会被删掉。
  *   - 每次同步前清空上面这几个输出目录，所以取消 publish 的笔记会从网站上消失。
  *
@@ -40,6 +41,7 @@ const CATEGORY = ["嵌入式", "数学建模", "软件"];
 const SKIP_DIRS = new Set([".obsidian", ".claudian", ".trash", ".git", "node_modules", "模板"]);
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"]);
 const ASSET_DIR = "public/notes";
+const LIST_FIELDS = ["stats", "specs", "highlights"];
 
 /* ---------- 读取配置 ---------- */
 function loadConfig() {
@@ -230,6 +232,12 @@ function main() {
     // 高亮：==文字== → <mark>
     body = body.replace(/==([^=\n]+)==/g, "<mark>$1</mark>");
 
+    const coverUrl = n.data.cover ? copyImage(n, String(n.data.cover)) : null;
+    if (coverUrl) {
+      const esc = coverUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      body = body.replace(new RegExp(`^!\\[[^\\]]*\\]\\(${esc}\\)[ \\t]*\\n?`, "m"), "");
+    }
+
     const fm = ["---", `title: ${yamlStr(n.data.title)}`, `slug: ${n.slug}`];
     if (n.data.date) fm.push(`date: ${fmtDate(n.data.date)}`);
     if (n.data.summary) fm.push(`summary: ${yamlStr(n.data.summary)}`);
@@ -237,7 +245,12 @@ function main() {
     if (n.data.category) fm.push(`category: ${yamlStr(n.data.category)}`);
     const tags = Array.isArray(n.data.tags) ? n.data.tags : n.data.tags ? [n.data.tags] : [];
     fm.push(`tags: [${tags.map(yamlStr).join(", ")}]`);
-    if (n.data.cover) { const url = copyImage(n, String(n.data.cover)); if (url) fm.push(`cover: ${yamlStr(url)}`); }
+    if (coverUrl) fm.push(`cover: ${yamlStr(coverUrl)}`);
+    // 「左 | 右」格式的列表：stats 大数字、specs 参数表、highlights 关于页卡片
+    for (const key of LIST_FIELDS) {
+      const items = Array.isArray(n.data[key]) ? n.data[key].map(String) : n.data[key] ? [String(n.data[key])] : [];
+      if (items.length) fm.push(`${key}: [${items.map(yamlStr).join(", ")}]`);
+    }
     if (n.isDraft) fm.push("draft: true");
     fm.push("---", "", "");
 

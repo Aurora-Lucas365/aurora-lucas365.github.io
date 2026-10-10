@@ -1,0 +1,62 @@
+---
+// 项目卡片。variant="feature" 是首页那张左文右图的大卡片，其余是普通卡片。
+import type { CollectionEntry } from "astro:content";
+import ProjectMeta from "./ProjectMeta.astro";
+import { splitPair } from "../utils";
+
+interface Props {
+  project: CollectionEntry<"projects">;
+  variant?: "feature" | "normal";
+  delay?: number;
+}
+const { project, variant = "normal", delay = 0 } = Astro.props;
+const d = project.data;
+const href = `/projects/${project.id}/`;
+const firstStat = d.stats[0] ? splitPair(d.stats[0]) : null;
+---
+{variant === "feature" ? (
+  <a class="card feature" href={href} data-reveal style={`--d:${delay}ms`}>
+    <div class="feature-text">
+      <ProjectMeta category={d.category} status={d.status} draft={d.draft} />
+      <h2>{d.title}</h2>
+      {d.summary && <p>{d.summary}</p>}
+      <span class="more">了解更多 ›</span>
+    </div>
+    {d.cover && <div class="feature-img"><img src={d.cover} alt={d.title} loading="eager" /></div>}
+  </a>
+) : (
+  <a class="card" href={href} data-reveal style={`--d:${delay}ms`}>
+    {d.cover && <div class="card-img"><img src={d.cover} alt={d.title} loading="lazy" /></div>}
+    <ProjectMeta category={d.category} status={d.status} draft={d.draft} />
+    <h3>{d.title}</h3>
+    {d.summary && <p>{d.summary}</p>}
+    {firstStat ? (
+      <span class="stat"><span class="big">{firstStat[0]}</span><span class="label">{firstStat[1]}</span></span>
+    ) : (
+      <span class="more push">了解更多 ›</span>
+    )}
+  </a>
+)}
+
+<style>
+  .feature { flex-basis: 100%; flex-direction: row; flex-wrap: wrap; gap: 0; padding: 0; overflow: hidden; }
+  .feature-text { flex: 1 1 380px; min-width: 0; padding: 56px 48px; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+  .feature h2 { font-size: clamp(32px, 4vw, 44px); line-height: 1.15; font-weight: 900; letter-spacing: -0.01em; }
+  .feature p { font-size: 18px; }
+  .feature-img { flex: 1 1 480px; min-width: 0; height: 440px; overflow: hidden; }
+  .feature-img img, .card-img img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s var(--ease); }
+  .feature:hover img, .card:hover .card-img img { transform: scale(1.03); }
+  .card-img { margin: -40px -40px 12px; height: 220px; overflow: hidden; }
+  .stat { margin-top: auto; padding-top: 24px; }
+  .stat .big { display: block; font-size: 64px; line-height: 1; font-weight: 900; color: var(--num); letter-spacing: -0.02em; }
+  .stat .label { display: block; margin-top: 8px; font-size: 14px; font-weight: 500; color: var(--muted); }
+  .push { margin-top: auto; padding-top: 12px; }
+  @media (max-width: 640px) {
+    .feature-text { padding: 32px 28px; }
+    .feature-img { height: 280px; }
+    .card-img { margin: -28px -28px 8px; height: 200px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .feature:hover img, .card:hover .card-img img { transform: none; }
+  }
+</style>

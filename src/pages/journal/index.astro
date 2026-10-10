@@ -6,18 +6,47 @@ import { formatDate, byDateDesc } from "../../utils";
 
 const journal = (await getCollection("journal")).sort(byDateDesc);
 ---
-<Base title="历程">
-  <h1>历程</h1>
-  <p class="muted">学习和做项目的过程记录。</p>
-  {journal.length === 0 && <p class="muted">还没有公开的历程。</p>}
-  <ul class="list">
-    {journal.map((j) => (
-      <li>
-        <a href={`/journal/${j.id}/`}>{j.data.title}</a>
-        {j.data.draft && <span class="tag draft">草稿</span>}
-        <div class="meta">{formatDate(j.data.date)}</div>
-        {j.data.summary && <div>{j.data.summary}</div>}
-      </li>
-    ))}
-  </ul>
+<Base title="历程" description="Lucas Taylor 学习和做项目的过程记录。">
+  <section class="wrap hero">
+    <h1 data-reveal>历程</h1>
+    <p class="sub" data-reveal style="--d:80ms">学习和做项目的过程记录，<br />包括走过的弯路。</p>
+  </section>
+
+  <section class="wrap list-wrap">
+    {journal.length === 0 ? (
+      <p class="empty" data-reveal>第一篇正在写。</p>
+    ) : (
+      <div class="list" data-reveal>
+        {journal.map((j) => (
+          <a class="item" href={`/journal/${j.id}/`}>
+            <span class="mono date">{formatDate(j.data.date)}</span>
+            <span class="body">
+              <span class="title">{j.data.title}{j.data.draft && <span class="tag draft">草稿</span>}</span>
+              {j.data.summary && <span class="summary">{j.data.summary}</span>}
+            </span>
+            <span class="arrow" aria-hidden="true">›</span>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
 </Base>
+
+<style>
+  .list-wrap { padding-bottom: 96px; }
+  .list { max-width: 880px; margin: 0 auto; background: var(--surface); border-radius: 28px; padding: 8px 0; }
+  .item { display: flex; gap: 24px; align-items: baseline; padding: 28px 36px; color: var(--fg); border-bottom: 1px solid var(--line); transition: background 0.2s; }
+  .item:last-child { border-bottom: 0; }
+  .item:hover { text-decoration: none; background: #fafafb; }
+  .date { flex: 0 0 auto; font-size: 13px; color: var(--muted); }
+  .body { flex: 1 1 auto; min-width: 0; }
+  .title { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 20px; font-weight: 700; }
+  .summary { display: block; margin-top: 6px; font-size: 15px; line-height: 1.7; color: var(--fg2); }
+  .arrow { flex: 0 0 auto; font-size: 22px; color: var(--num); transition: transform 0.3s var(--ease); }
+  .item:hover .arrow { transform: translateX(4px); color: var(--accent); }
+  .empty { text-align: center; color: var(--muted); font-size: 18px; }
+  @media (max-width: 640px) {
+    .item { flex-direction: column; gap: 6px; padding: 22px 24px; }
+    .arrow { display: none; }
+  }
+</style>

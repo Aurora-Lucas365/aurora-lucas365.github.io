@@ -1,22 +1,56 @@
 ---
 // 关于页：内容来自 Obsidian 里的「关于.md」
+//   summary → 顶部介绍；highlights → 四张卡片；正文 → 下面的详细内容
 import { getEntry, render } from "astro:content";
 import Base from "../layouts/Base.astro";
+import { CONTACT, splitPair } from "../utils";
 
 const entry = await getEntry("pages", "about");
 const Content = entry ? (await render(entry)).Content : null;
+const d = entry?.data;
+const highlights = (d?.highlights ?? []).map(splitPair);
 ---
-<Base title="关于">
-  {Content ? (
-    <>
-      <h1>{entry!.data.title}</h1>
-      {entry!.data.draft && <p><span class="tag draft">草稿</span></p>}
-      <article><Content /></article>
-    </>
-  ) : (
-    <>
-      <h1>关于我</h1>
-      <p class="muted">这一页还在写。</p>
-    </>
+<Base title="关于" description={d?.summary}>
+  <section class="wrap hero">
+    <h1 data-reveal>{d?.title ?? "关于我"}{d?.draft && <span class="tag draft">草稿</span>}</h1>
+    {d?.summary && <p class="sub" data-reveal style="--d:80ms">{d.summary}</p>}
+    <div class="actions" data-reveal style="--d:160ms">
+      <a class="btn primary" href={`mailto:${CONTACT.email}`}>发邮件</a>
+      <a class="btn ghost" href={CONTACT.github}>GitHub ›</a>
+      <a class="btn ghost" href={CONTACT.douyin}>抖音 ›</a>
+    </div>
+  </section>
+
+  {highlights.length > 0 && (
+    <section class="wrap cards">
+      <div class="grid">
+        {highlights.map(([k, v], i) => (
+          <div class="card hl" data-reveal style={`--d:${(i % 4) * 80}ms`}>
+            <span class="mono idx">{String(i + 1).padStart(2, "0")}</span>
+            <h3>{k}</h3>
+            <p>{v}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   )}
+
+  <section class="band">
+    <div class="wrap section">
+      {Content ? (
+        <article class="prose"><Content /></article>
+      ) : (
+        <p class="prose">这一页还在写。</p>
+      )}
+    </div>
+  </section>
 </Base>
+
+<style>
+  .hero h1 { display: inline-flex; gap: 12px; align-items: center; }
+  .cards { padding-bottom: 96px; }
+  .hl { flex-basis: 220px; padding: 32px; gap: 10px; }
+  .hl h3 { font-size: 22px; }
+  .idx { font-size: 12px; color: var(--num); }
+  @media (max-width: 640px) { .cards { padding-bottom: 64px; } }
+</style>

@@ -1,38 +1,88 @@
 ---
-// 首页：一句话介绍 + 最近的项目 + 最近的历程
-import { getCollection } from "astro:content";
+// 首页：大标题 → 项目卡片（有封面的最新项目放大）→ 最近历程 + 关于我
+import { getCollection, getEntry } from "astro:content";
 import Base from "../layouts/Base.astro";
-import { formatDate, byDateDesc } from "../utils";
+import ProjectCard from "../components/ProjectCard.astro";
+import { formatDate, byDateDesc, splitPair } from "../utils";
 
 const projects = (await getCollection("projects")).sort(byDateDesc);
-const journal = (await getCollection("journal")).sort(byDateDesc).slice(0, 5);
+const featured = projects.find((p) => p.data.cover);
+const others = projects.filter((p) => p !== featured);
+const journal = (await getCollection("journal")).sort(byDateDesc).slice(0, 3);
+const about = await getEntry("pages", "about");
+const intro = about?.data.summary ?? "我是 Lucas Taylor，方向是电气工程 + 嵌入式 + AI。这里记录我做项目和学习的过程。";
+const highlights = (about?.data.highlights ?? []).map(splitPair);
 ---
 <Base>
-  <h1>你好，我是 Lucas Taylor</h1>
-  <p class="muted">电气工程及其自动化专业本科生，方向是电气工程 + 嵌入式 + AI。这里记录我做项目和学习的过程。</p>
+  <section class="wrap hero">
+    <!-- 首页大标题：想换文案直接改下面三行 -->
+    <p class="eyebrow" data-reveal>电气工程及其自动化 · 本科在读</p>
+    <h1 data-reveal style="--d:80ms">把模型算出来，<br />把板子焊出来。</h1>
+    <p class="sub" data-reveal style="--d:160ms">{intro}</p>
+    <div class="actions" data-reveal style="--d:240ms">
+      <a class="btn primary" href="/projects/">看项目</a>
+      {journal.length > 0
+        ? <a class="btn ghost" href="/journal/">读历程 ›</a>
+        : <a class="btn ghost" href="/about/">关于我 ›</a>}
+    </div>
+  </section>
 
-  <h2>项目</h2>
-  {projects.length === 0 && <p class="muted">还没有公开的项目。</p>}
-  <ul class="list">
-    {projects.map((p) => (
-      <li>
-        <a href={`/projects/${p.id}/`}>{p.data.title}</a>
-        {p.data.draft && <span class="tag draft">草稿</span>}
-        <div class="meta">{p.data.category} · {p.data.status} · {formatDate(p.data.date)}</div>
-        {p.data.summary && <div>{p.data.summary}</div>}
-      </li>
-    ))}
-  </ul>
+  {projects.length > 0 && (
+    <section class="wrap projects">
+      <div class="grid">
+        {featured && <ProjectCard project={featured} variant="feature" />}
+        {others.map((p, i) => <ProjectCard project={p} delay={(i % 3) * 80} />)}
+      </div>
+    </section>
+  )}
 
-  <h2>最近的历程</h2>
-  {journal.length === 0 && <p class="muted">还没有公开的历程。</p>}
-  <ul class="list">
-    {journal.map((j) => (
-      <li>
-        <a href={`/journal/${j.id}/`}>{j.data.title}</a>
-        {j.data.draft && <span class="tag draft">草稿</span>}
-        <div class="meta">{formatDate(j.data.date)}</div>
-      </li>
-    ))}
-  </ul>
+  <section class="band">
+    <div class="wrap section split">
+      {journal.length > 0 && (
+        <div class="col" data-reveal>
+          <h2 class="section-title">历程</h2>
+          <div class="stack">
+            {journal.map((j) => (
+              <a class="row-card" href={`/journal/${j.id}/`}>
+                <span class="mono date">{formatDate(j.data.date)}{j.data.draft && " · 草稿"}</span>
+                <span class="title">{j.data.title}</span>
+              </a>
+            ))}
+          </div>
+          <a class="see-all" href="/journal/">全部历程 ›</a>
+        </div>
+      )}
+      <div class="col" data-reveal style="--d:80ms">
+        <h2 class="section-title">关于我</h2>
+        {highlights.length > 0 ? (
+          <div class="mini-grid">
+            {highlights.map(([k, v]) => (
+              <div class="mini"><div class="k">{k}</div><div class="v">{v}</div></div>
+            ))}
+          </div>
+        ) : (
+          <p class="lead">{intro}</p>
+        )}
+        <a class="see-all" href="/about/">更多关于我 ›</a>
+      </div>
+    </div>
+  </section>
 </Base>
+
+<style>
+  .projects { padding-bottom: 96px; }
+  .split { display: flex; flex-wrap: wrap; gap: 56px; }
+  .col { flex: 1 1 420px; min-width: 0; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .row-card { display: block; padding: 24px 28px; background: var(--bg); border-radius: 20px; color: var(--fg); transition: background 0.2s; }
+  .row-card:hover { text-decoration: none; background: #eceef0; }
+  .row-card .date { font-size: 13px; color: var(--muted); }
+  .row-card .title { display: block; margin-top: 6px; font-size: 20px; font-weight: 700; }
+  .mini-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .mini { flex: 1 1 200px; min-width: 0; padding: 24px; background: var(--bg); border-radius: 20px; }
+  .mini .k { font-size: 18px; font-weight: 700; }
+  .mini .v { margin-top: 8px; font-size: 15px; line-height: 1.7; color: var(--fg2); }
+  .lead { margin: 0; font-size: 18px; line-height: 1.8; color: var(--fg2); }
+  .see-all { display: inline-block; margin-top: 24px; font-size: 16px; }
+  @media (max-width: 640px) { .projects { padding-bottom: 64px; } .split { gap: 48px; } }
+</style>

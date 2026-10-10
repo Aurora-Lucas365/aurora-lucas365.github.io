@@ -1,26 +1,60 @@
 ---
-// 单篇历程的页面
+// 单篇历程
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { formatDate } from "../../utils";
+import { formatDate, byDateDesc } from "../../utils";
 
 export async function getStaticPaths() {
-  const journal = await getCollection("journal");
-  return journal.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+  const journal = (await getCollection("journal")).sort(byDateDesc);
+  return journal.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: { entry, newer: journal[i - 1], older: journal[i + 1] },
+  }));
 }
 
-const { entry } = Astro.props;
+const { entry, newer, older } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 ---
-<Base title={d.title} description={d.summary}>
-  <p class="meta"><a href="/journal/">← 全部历程</a></p>
-  <h1>{d.title}</h1>
-  <p class="meta">
-    {formatDate(d.date)}
-    {d.draft && <span class="tag draft">草稿</span>}
-  </p>
-  <article>
-    <Content />
-  </article>
+<Base title={d.title} description={d.summary} tone="white" image={d.cover}>
+  <section class="wrap hero">
+    <p class="eyebrow" data-reveal>
+      <span class="mono when">{formatDate(d.date)}</span>
+      {d.draft && <span class="tag draft">草稿</span>}
+    </p>
+    <h1 data-reveal style="--d:80ms">{d.title}</h1>
+    {d.summary && <p class="sub" data-reveal style="--d:160ms">{d.summary}</p>}
+  </section>
+
+  <section class="wrap section">
+    <article class="prose">
+      {d.cover && <img src={d.cover} alt={d.title} />}
+      <Content />
+    </article>
+    {d.tags.length > 0 && (
+      <p class="tags">{d.tags.map((t) => <span class="tag">#{t}</span>)}</p>
+    )}
+  </section>
+
+  <section class="band grey">
+    <nav class="wrap pager" aria-label="上一篇和下一篇">
+      {older ? <a href={`/journal/${older.id}/`}><span class="mono">更早</span>{older.data.title}</a> : <span></span>}
+      {newer ? <a class="right" href={`/journal/${newer.id}/`}><span class="mono">更新</span>{newer.data.title}</a> : <span></span>}
+    </nav>
+    <p class="wrap back"><a href="/journal/">‹ 全部历程</a></p>
+  </section>
 </Base>
+
+<style>
+  .hero { padding-bottom: 24px; }
+  .hero h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.2; }
+  .when { font-size: 14px; color: var(--muted); }
+  .section { padding-top: 48px; }
+  .tags { max-width: 720px; margin: 48px auto 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .pager { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; padding-top: 56px; }
+  .pager a { flex: 1 1 280px; max-width: 480px; padding: 24px 28px; background: var(--surface); border-radius: 20px; color: var(--fg); font-weight: 700; }
+  .pager a:hover { text-decoration: none; box-shadow: 0 12px 32px rgba(26, 28, 30, 0.07); }
+  .pager a.right { text-align: right; margin-left: auto; }
+  .pager .mono { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 400; color: var(--muted); }
+  .back { padding-top: 32px; padding-bottom: 72px; margin: 0; font-size: 16px; }
+</style>

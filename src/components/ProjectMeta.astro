@@ -1,0 +1,18 @@
+---
+// 项目的一行小信息：分类色标签 + 状态符号（+ 可选日期、草稿标记）
+import { CATEGORY_CLASS, STATUS_ICON, STATUS_CLASS, formatDate } from "../utils";
+
+interface Props {
+  category: string;
+  status: string;
+  date?: Date;
+  draft?: boolean;
+}
+const { category, status, date, draft } = Astro.props;
+---
+<span class="meta-row">
+  <span class={`tag ${CATEGORY_CLASS[category] ?? ""}`}>{category}</span>
+  <span class={`status ${STATUS_CLASS[status] ?? ""}`}><span class="dot" aria-hidden="true">{STATUS_ICON[status]}</span>{status}</span>
+  {date && <span class="status">{formatDate(date)}</span>}
+  {draft && <span class="tag draft">草稿</span>}
+</span>

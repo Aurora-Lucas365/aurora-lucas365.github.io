@@ -11,6 +11,10 @@ const common = {
   tags: z.array(z.string()).default([]),
   cover: z.string().optional(),
   draft: z.boolean().default(false),
+  // 下面三个都是「左边 | 右边」格式的列表，可以不填
+  stats: z.array(z.string()).default([]), // 项目页的大数字，如「5 | 个 SG90 舵机」
+  specs: z.array(z.string()).default([]), // 项目页的参数表，如「尾巴舵机 | PA6」
+  highlights: z.array(z.string()).default([]), // 关于页的卡片，如「英语 | 已过六级」
 };
 
 const projects = defineCollection({

@@ -1,31 +1,44 @@
 ---
-// 项目列表：按类别分组
+// 项目列表：按分类分组，顶部的分类标签可以跳到对应分组
 import { getCollection } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { formatDate, byDateDesc } from "../../utils";
+import ProjectCard from "../../components/ProjectCard.astro";
+import { byDateDesc, CATEGORIES, CATEGORY_CLASS } from "../../utils";
 
 const projects = (await getCollection("projects")).sort(byDateDesc);
-const groups = ["嵌入式", "数学建模", "软件"]
-  .map((name) => ({ name, items: projects.filter((p) => p.data.category === name) }))
-  .filter((g) => g.items.length > 0);
+const groups = CATEGORIES.map((c) => ({ name: c, items: projects.filter((p) => p.data.category === c) })).filter((g) => g.items.length);
 ---
-<Base title="项目">
-  <h1>项目</h1>
-  <p class="muted">做过和正在做的项目，按类别分组。</p>
-  {groups.length === 0 && <p class="muted">还没有公开的项目。</p>}
-  {groups.map((g) => (
-    <section>
-      <h2>{g.name}</h2>
-      <ul class="list">
-        {g.items.map((p) => (
-          <li>
-            <a href={`/projects/${p.id}/`}>{p.data.title}</a>
-            {p.data.draft && <span class="tag draft">草稿</span>}
-            <div class="meta">{p.data.status} · {formatDate(p.data.date)}</div>
-            {p.data.summary && <div>{p.data.summary}</div>}
-          </li>
+<Base title="项目" description="Lucas Taylor 做过的和正在做的项目，按嵌入式、数学建模、软件分类。">
+  <section class="wrap hero">
+    <h1 data-reveal>项目</h1>
+    <p class="sub" data-reveal style="--d:80ms">做过的、正在做的，按方向分类。</p>
+    {groups.length > 1 && (
+      <nav class="jump" data-reveal style="--d:160ms" aria-label="按分类跳转">
+        {groups.map((g) => (
+          <a class={`tag ${CATEGORY_CLASS[g.name]}`} href={`#${g.name}`}>{g.name} · {g.items.length}</a>
         ))}
-      </ul>
-    </section>
-  ))}
+      </nav>
+    )}
+  </section>
+
+  <div class="wrap groups">
+    {groups.length === 0 && <p class="empty">还没有公开的项目。</p>}
+    {groups.map((g) => (
+      <section id={g.name} class="group">
+        <h2 class="section-title" data-reveal>{g.name}</h2>
+        <div class="grid">
+          {g.items.map((p, i) => <ProjectCard project={p} variant={p.data.cover ? "feature" : "normal"} delay={(i % 3) * 80} />)}
+        </div>
+      </section>
+    ))}
+  </div>
 </Base>
+
+<style>
+  .jump { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 32px; }
+  .jump .tag { font-size: 13px; padding: 4px 12px; }
+  .jump .tag:hover { text-decoration: none; filter: brightness(0.96); }
+  .groups { padding-bottom: 96px; }
+  .group { padding-top: 24px; margin-bottom: 64px; scroll-margin-top: 72px; }
+  .empty { text-align: center; color: var(--muted); }
+</style>

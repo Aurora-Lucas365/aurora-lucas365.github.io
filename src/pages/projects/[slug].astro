@@ -1,27 +1,106 @@
 ---
 // 单个项目的详情页。文件名里的 [slug] 表示：每个项目都会用这个模板生成一页。
+// 页面结构：大标题 → 封面 → 大数字（stats）→ 参数表（specs）→ 正文 → 标签和更多项目
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { formatDate } from "../../utils";
+import ProjectMeta from "../../components/ProjectMeta.astro";
+import ProjectCard from "../../components/ProjectCard.astro";
+import { byDateDesc, splitPair } from "../../utils";
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects");
-  return projects.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+  const projects = (await getCollection("projects")).sort(byDateDesc);
+  return projects.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry, more: projects.filter((p) => p.id !== entry.id).slice(0, 2) },
+  }));
 }
 
-const { entry } = Astro.props;
+const { entry, more } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
+const stats = d.stats.map(splitPair);
+const specs = d.specs.map(splitPair);
 ---
-<Base title={d.title} description={d.summary}>
-  <p class="meta"><a href="/projects/">← 全部项目</a></p>
-  <h1>{d.title}</h1>
-  <p class="meta">
-    {d.category} · {d.status} · {formatDate(d.date)}
-    {d.draft && <span class="tag draft">草稿</span>}
-  </p>
-  <p>{d.tags.map((t) => <span class="tag">{t}</span>)}</p>
-  <article>
-    <Content />
-  </article>
+<Base title={d.title} description={d.summary} tone="white" image={d.cover}>
+  <section class="wrap hero">
+    <p class="eyebrow" data-reveal><ProjectMeta category={d.category} status={d.status} date={d.date} draft={d.draft} /></p>
+    <h1 data-reveal style="--d:80ms">{d.title}</h1>
+    {d.summary && <p class="sub" data-reveal style="--d:160ms">{d.summary}</p>}
+  </section>
+
+  {d.cover && (
+    <section class="wrap">
+      <div class="cover" data-reveal><img src={d.cover} alt={d.title} /></div>
+    </section>
+  )}
+
+  {stats.length > 0 && (
+    <section class="wrap stats">
+      {stats.map(([num, label], i) => (
+        <div class="stat" data-reveal style={`--d:${i * 80}ms`}>
+          <div class="num">{num}</div>
+          <div class="label">{label}</div>
+        </div>
+      ))}
+    </section>
+  )}
+
+  {specs.length > 0 && (
+    <section class="band grey">
+      <div class="wrap section">
+        <h2 class="section-title center" data-reveal>参数一览</h2>
+        <dl class="specs" data-reveal>
+          {specs.map(([k, v]) => (
+            <div class="spec-row"><dt>{k}</dt><dd class="mono">{v}</dd></div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  )}
+
+  <section class="wrap section">
+    <article class="prose">
+      <Content />
+    </article>
+    {d.tags.length > 0 && (
+      <p class="tags">{d.tags.map((t) => <span class="tag">#{t}</span>)}</p>
+    )}
+  </section>
+
+  <section class="band grey">
+    <div class="wrap section">
+      {more.length > 0 && (
+        <>
+          <h2 class="section-title" data-reveal>更多项目</h2>
+          <div class="grid">{more.map((p, i) => <ProjectCard project={p} delay={i * 80} />)}</div>
+        </>
+      )}
+      <p class="back"><a href="/projects/">‹ 全部项目</a></p>
+    </div>
+  </section>
 </Base>
+
+<style>
+  .hero { padding-bottom: 56px; }
+  .hero h1 { font-size: clamp(40px, 6.5vw, 76px); }
+  .cover { border-radius: 28px; overflow: hidden; background: var(--bg); }
+  .cover img { display: block; width: 100%; height: min(620px, 62vw); object-fit: cover; transition: transform 1.2s var(--ease); }
+  :global(.js) .cover:not(.in) img { transform: scale(1.04); }
+  .stats { display: flex; flex-wrap: wrap; gap: 32px 20px; padding-top: 88px; padding-bottom: 88px; }
+  .stat { flex: 1 1 200px; min-width: 0; text-align: center; }
+  .num { font-size: clamp(36px, 4.5vw, 48px); line-height: 1.15; font-weight: 900; letter-spacing: -0.01em; }
+  .label { margin-top: 6px; font-size: 16px; color: var(--muted); }
+  .center { text-align: center; }
+  .specs { max-width: 680px; margin: 0 auto; background: var(--surface); border-radius: 20px; padding: 8px 28px; }
+  .spec-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 17px; }
+  .spec-row:last-child { border-bottom: 0; }
+  .spec-row dt { color: var(--fg); }
+  .spec-row dd { margin: 0; color: var(--muted); font-size: 15px; text-align: right; }
+  .tags { max-width: 720px; margin: 48px auto 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .back { margin: 40px 0 0; font-size: 16px; }
+  @media (max-width: 640px) {
+    .cover { border-radius: 20px; }
+    .stats { padding-top: 56px; padding-bottom: 56px; }
+    .specs { padding: 4px 20px; }
+  }
+</style>
